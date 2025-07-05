@@ -1,0 +1,58 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+/// A student submitting a single CV
+model Reviewee {
+  id           Int       @id @default(autoincrement())
+  name         String
+  rollNo       String    @unique
+  email        String?
+  cvLink       String
+  profile      String
+  status       Boolean   @default(false)    // false = not reviewed; true = reviewed
+  submittedAt  DateTime  @default(now())
+
+  assignedTo   Reviewer? @relation(fields: [assignedToId], references: [id])
+  assignedToId Int?
+  review       Review?
+}
+
+model Admin {
+  id           Int       @id @default(autoincrement())
+  name         String
+  password     String
+}
+
+/// A reviewer, who may work across multiple profiles
+model Reviewer {
+  id            Int        @id @default(autoincrement())
+  name          String     @unique
+  password      String
+  profiles      String[]  @default([])
+  reviewsNumber      Int        // how many CVs they can handle
+  reviewedCount Int        @default(0)
+  email         String?
+  admin         Boolean    @default(false)
+
+  assignedCVs   Reviewee[] 
+  reviewsGiven  Review[]   @relation("ReviewerToReview")
+}
+
+/// A set of feedback strings, one per criterion
+model Review {
+  id           Int       @id @default(autoincrement())
+  comments     String[]  // e.g. ["formatting OK","grammar needs work",…]
+  createdAt    DateTime  @default(now())
+
+  reviewee     Reviewee  @relation(fields: [revieweeId], references: [id])
+  revieweeId   Int       @unique
+  reviewer     Reviewer  @relation("ReviewerToReview", fields: [reviewerId], references: [id])
+  reviewerId   Int
+}
